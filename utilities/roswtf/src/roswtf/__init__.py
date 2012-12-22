@@ -93,12 +93,34 @@ def roswtf_main():
         _roswtf_main()
     except WtfException, e:
         print >> sys.stderr, e
-        
+
+
+def find_catkin_pkgs(directory=None):
+    try:
+        from catkin_pkg.packages import find_packages
+    except ImportError:
+        print("Failed to load catkin_pkg, install it to debug catkin packages")
+        return []
+    all_pkgs = []
+    for path in os.environ['ROS_PACKAGE_PATH']:
+        try:
+            pkgs = find_packages(path)
+        except Exception as e:
+            print("Error searching path '{0}' for packages:".format(path))
+            print("\t" + str(e))
+        if pkgs:
+            all_pkgs.extend([p.name for p in pkgs.values()])
+    return all_pkgs
+
+
 def _roswtf_main():
     launch_files = names = None
     # performance optimization
     rospack = rospkg.RosPack()
     all_pkgs = rospack.list()
+
+    catkin_pkgs = find_catkin_pkgs()
+    all_pkgs.extend(catkin_pkgs)
 
     import optparse
     parser = optparse.OptionParser(usage="usage: roswtf [launch file]",
