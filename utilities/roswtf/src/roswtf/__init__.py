@@ -36,14 +36,16 @@
 roswtf command-line tool.
 """
 
+from __future__ import print_function
+
 import os
-import socket
 import sys
 import traceback
 
 import rospkg
 import rosgraph.names
-    
+
+
 def yaml_results(ctx):
     cd = ctx.as_dictionary()
     d = {}
@@ -51,37 +53,41 @@ def yaml_results(ctx):
     d['errors'] = {}
     wd = d['warnings']
     for warn in ctx.warnings:
-        wd[warn.format_msg%cd] = warn.return_val
-    ed = d['warnings']        
+        wd[warn.format_msg % cd] = warn.return_val
+    ed = d['warnings']
     for err in ctx.warnings:
-        ed[err.format_msg%cd] = err.return_val
+        ed[err.format_msg % cd] = err.return_val
     import yaml
-    print yaml.dump(d)
+    print(yaml.dump(d))
+
 
 def print_results(ctx):
     if not ctx.warnings and not ctx.errors:
-        print "No errors or warnings"
+        print("No errors or warnings")
     else:
         if ctx.warnings:
-            print "Found %s warning(s).\nWarnings are things that may be just fine, but are sometimes at fault\n"%len(ctx.warnings)
+            print("Found %s warning(s)." % len(ctx.warnings))
+            print("Warnings are things that may be just fine, but are "
+                  "sometimes at fault\n")
             for warn in ctx.warnings:
-                print '\033[1mWARNING\033[0m', warn.msg
-            print ''
+                print('\033[1mWARNING\033[0m' + str(warn.msg))
+            print('')
 
         if ctx.errors:
-            print "Found %s error(s).\n"%len(ctx.errors)        
+            print("Found %s error(s).\n" % len(ctx.errors))
             for e in ctx.errors:
-                print '\033[31m\033[1mERROR\033[0m', e.msg
-                #print "ERROR:", e.msg
-    
+                print('\033[31m\033[1mERROR\033[0m' + str(e.msg))
+
+
 def roswtf_main():
     try:
         import std_msgs.msg
         import rosgraph_msgs.msg
     except ImportError:
-        print "ERROR: The core ROS message libraries (std_msgs and rosgraph_msgs) have not been built."
+        print("ERROR: The core ROS message libraries "
+              "(std_msgs and rosgraph_msgs) have not been built.")
         sys.exit(1)
-    
+
     from roswtf.context import WtfException
     try:
         _roswtf_main()
@@ -95,19 +101,24 @@ def _roswtf_main():
     all_pkgs = rospack.list()
 
     import optparse
-    parser = optparse.OptionParser(usage="usage: roswtf [launch file]", description="roswtf is a tool for verifying a ROS installation and running system. Checks provided launchfile if provided, else current stack or package.")
+    parser = optparse.OptionParser(usage="usage: roswtf [launch file]",
+        description="""\
+roswtf is a tool for verifying a ROS installation and running system. \
+Checks provided launchfile if provided, else current stack or package.\
+"""
+    )
     # #2268
-    parser.add_option("--all", 
+    parser.add_option("--all",
                       dest="all_packages", default=False,
                       action="store_true",
                       help="run roswtf against all packages")
     # #2270
-    parser.add_option("--no-plugins", 
+    parser.add_option("--no-plugins",
                       dest="disable_plugins", default=False,
                       action="store_true",
                       help="disable roswtf plugins")
 
-    parser.add_option("--offline", 
+    parser.add_option("--offline",
                       dest="offline", default=False,
                       action="store_true",
                       help="only run offline tests")
@@ -128,63 +139,63 @@ def _roswtf_main():
     import roswtf.network
     import roswtf.packages
     import roswtf.roslaunchwtf
-    import roswtf.stacks    
+    import roswtf.stacks
     import roswtf.plugins
     if not options.disable_plugins:
         static_plugins, online_plugins = roswtf.plugins.load_plugins()
     else:
         static_plugins, online_plugins = [], []
-        
+
     # - do a ros_root check first and abort if it fails as rest of tests are useless after that
     error = ros_root_check(None, ros_root=os.environ['ROS_ROOT'])
     if error:
-        print "ROS_ROOT is invalid: "+str(error)
+        print("ROS_ROOT is invalid: " + str(error))
         sys.exit(1)
 
     all_warnings = []
     all_errors = []
-    
+
     if launch_files:
         ctx = WtfContext.from_roslaunch(launch_files)
         #TODO: allow specifying multiple roslaunch files
     else:
         curr_package = rospkg.get_package_name('.')
         if curr_package:
-            print "Package:",curr_package
+            print("Package:" + str(curr_package))
             ctx = WtfContext.from_package(curr_package)
             #TODO: load all .launch files in package
         elif os.path.isfile('stack.xml'):
             curr_stack = os.path.basename(os.path.abspath('.'))
-            print "Stack:",curr_stack            
+            print("Stack:" + str(curr_stack))
             ctx = WtfContext.from_stack(curr_stack)
         else:
-            print "No package or stack in context"
+            print("No package or stack in context")
             ctx = WtfContext.from_env()
         if options.all_packages:
-            print "roswtf will run against all packages"
+            print("roswtf will run against all packages")
             ctx.pkgs = all_pkgs
 
     # static checks
     wtf_check_environment(ctx)
     roswtf.network.wtf_check(ctx)
     roswtf.packages.wtf_check(ctx)
-    roswtf.stacks.wtf_check(ctx)    
+    roswtf.stacks.wtf_check(ctx)
     roswtf.roslaunchwtf.wtf_check_static(ctx)
     for p in static_plugins:
         p(ctx)
 
-    print "="*80
-    print "Static checks summary:\n"
+    print("=" * 80)
+    print("Static checks summary:\n")
     print_results(ctx)
 
     # Save static results and start afresh for online checks
     all_warnings.extend(ctx.warnings)
     all_errors.extend(ctx.errors)
     del ctx.warnings[:]
-    del ctx.errors[:]    
+    del ctx.errors[:]
 
     # test online
-    print "="*80
+    print("=" * 80)
 
     try:
 
@@ -194,16 +205,19 @@ def _roswtf_main():
             online_checks = True
         if online_checks:
             online_checks = True
-            print "Beginning tests of your ROS graph. These may take awhile..."
-            
+            print("Beginning tests of your ROS graph. These may take awhile...")
+
             # online checks
             wtf_check_graph(ctx, names=names)
         elif names:
             # TODO: need to rework this logic
-            print "\nCannot communicate with master, unable to diagnose [%s]"%(', '.join(names))
+            print("\nCannot communicate with master, unable to diagnose [%s]" % (', '.join(names)))
             return
         else:
-            print "\nROS Master does not appear to be running.\nOnline graph checks will not be run.\nROS_MASTER_URI is [%s]"%(ctx.ros_master_uri)
+            print("")
+            print("ROS Master does not appear to be running.")
+            print("Online graph checks will not be run.")
+            print("ROS_MASTER_URI is [%s]" % (ctx.ros_master_uri))
             return
 
         # spin up a roswtf node so we can subscribe to messages
@@ -219,17 +233,17 @@ def _roswtf_main():
 
         if online_checks:
             # done
-            print "\nOnline checks summary:\n"
+            print("\nOnline checks summary:\n")
             print_results(ctx)
-            
+
     except roswtf.context.WtfException, e:
-        print >> sys.stderr, str(e)
-        print "\nAborting checks, partial results summary:\n"
+        print(str(e), file=sys.stderr)
+        print("\nAborting checks, partial results summary:\n")
         print_results(ctx)
     except Exception, e:
         traceback.print_exc()
-        print >> sys.stderr, str(e)
-        print "\nAborting checks, partial results summary:\n"
+        print(str(e), file=sys.stderr)
+        print("\nAborting checks, partial results summary:\n")
         print_results(ctx)
 
     #TODO: print results in YAML if run remotely
