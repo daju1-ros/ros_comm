@@ -70,13 +70,13 @@ def print_results(ctx):
             print("Warnings are things that may be just fine, but are "
                   "sometimes at fault\n")
             for warn in ctx.warnings:
-                print('\033[1mWARNING\033[0m' + str(warn.msg))
+                print('\033[1mWARNING\033[0m ' + str(warn.msg))
             print('')
 
         if ctx.errors:
             print("Found %s error(s).\n" % len(ctx.errors))
             for e in ctx.errors:
-                print('\033[31m\033[1mERROR\033[0m' + str(e.msg))
+                print('\033[31m\033[1mERROR\033[0m ' + str(e.msg))
 
 
 def roswtf_main():
@@ -102,7 +102,9 @@ def find_catkin_pkgs(directory=None):
         print("Failed to load catkin_pkg, install it to debug catkin packages")
         return []
     all_pkgs = []
-    for path in os.environ['ROS_PACKAGE_PATH']:
+    search_paths = directory if directory \
+                             else os.environ['ROS_PACKAGE_PATH'].split(':')
+    for path in search_paths:
         try:
             pkgs = find_packages(path)
         except Exception as e:
@@ -182,13 +184,17 @@ Checks provided launchfile if provided, else current stack or package.\
         #TODO: allow specifying multiple roslaunch files
     else:
         curr_package = rospkg.get_package_name('.')
+        if curr_package is None:
+            curr_catkin_package = find_catkin_pkgs('.')
+            if len(curr_catkin_package) == 1:
+                curr_package = curr_catkin_package[0]
         if curr_package:
-            print("Package:" + str(curr_package))
+            print("Package: " + str(curr_package))
             ctx = WtfContext.from_package(curr_package)
             #TODO: load all .launch files in package
         elif os.path.isfile('stack.xml'):
             curr_stack = os.path.basename(os.path.abspath('.'))
-            print("Stack:" + str(curr_stack))
+            print("Stack: " + str(curr_stack))
             ctx = WtfContext.from_stack(curr_stack)
         else:
             print("No package or stack in context")
