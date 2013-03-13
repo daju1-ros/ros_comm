@@ -463,7 +463,14 @@ class Loader(object):
                 print "... executing command param [%s]"%command
             import subprocess, shlex #shlex rocks
             try:
-                p = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE)
+                # Original command used no shell.
+                # p = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE) 
+                # Need the shell to be able to call windows .bat python starters without adding
+                # the .bat to the command call. Note that the command then has to be a string in 
+                # unix, not a list. Is this going to cause issues anywhere?
+                # possible security hazard if the input is untrusted though. Refer to
+                # http://docs.python.org/library/subprocess.html#using-the-subprocess-module
+                p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True) 
                 c_value = p.communicate()[0]
                 if p.returncode != 0:
                     raise ValueError("Cannot load command parameter [%s]: command [%s] returned with code [%s]"%(name, command, p.returncode))
