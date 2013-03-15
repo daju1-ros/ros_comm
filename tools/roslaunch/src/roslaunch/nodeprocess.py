@@ -291,7 +291,7 @@ class LocalProcess(Process):
                 preexec_function = None
                 close_file_descriptor=False
             try:
-                self.popen = subprocess.Popen(self.args, cwd=cwd, stdout=logfileout, stderr=logfileerr, env=full_env, close_fds=close_file_descriptor, preexec_fn=preexec_function)
+                self.popen = subprocess.Popen(self.args, cwd=cwd, stdout=logfileout, stderr=logfileerr, env=full_env, close_fds=close_file_descriptor, preexec_fn=preexec_function, shell=True)
             except OSError, (errno, msg):
                 self.started = True # must set so is_alive state is correct
                 _logger.error("OSError(%d, %s)", errno, msg)
