@@ -204,6 +204,11 @@ def setup_env(node, machine, master_uri, env=None):
         for name, value in node.env_args:
             d[name] = value
 
+    if os.name == 'nt':
+        for i in d:
+            if type(d[i]).__name__ == "unicode":
+                d[i] = d[i].encode('utf-8')
+
     return d
 
 def rle_wrapper(fn):
